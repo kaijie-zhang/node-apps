@@ -6,16 +6,16 @@ if (!locQuery){
     return console.log('Location not provided')
 }
 
-geocode (locQuery, (error, geocodeData)=> {
+geocode (locQuery, (error, {latitude, longitude, location} = {})=> {
     if (error){
         return console.log(error)
     }
 
-    forecast(geocodeData.latitude, geocodeData.longitude, (error, forecastData) => {
+    forecast(latitude, longitude, (error, forecastData) => {
         if (error){
             return console.log(error)
         }
-        console.log(geocodeData.location)
+        console.log(location)
         console.log(forecastData)
     })
     
