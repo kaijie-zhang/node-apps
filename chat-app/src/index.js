@@ -3,6 +3,7 @@ const http = require('http')
 const express = require('express')
 const socketio = require('socket.io')
 const Filter = require('bad-words')
+const { generateMessage, generateLocationMessage } = require('./utils/messages')
 
 const app  = express()
 const server = http.createServer(app)
@@ -16,32 +17,33 @@ app.use(express.static(publicDirectoryPath))
 io.on('connection', (socket) => {
     console.log('New WebSocket connection')
 
-    socket.emit('message', "Welcome!")
-    socket.broadcast.emit('message', 'A new user has joined!')
+    socket.emit('message', generateMessage('Welcome!'))
+    socket.broadcast.emit('message', generateMessage('A new user has joined!'))
 
     socket.on('sendMessage', (message, callback) => {
         const filter = new Filter()
 
         if (filter.isProfane(message)) {
-            callback({"swore": true})
-            io.emit('message', filter.clean(message))
+            callback({"swore": true}) //TODO: change admin messages to after swear message is sent, by using the new message schema
+            io.emit('message', generateMessage(filter.clean(message)))
         } else{
-            io.emit('message', message)
+            io.emit('message', generateMessage(message))
             callback('Delivered')
         }
 
     })
 
     socket.on('disconnect', () => {
-        io.emit('message', 'A user has left!')
+        io.emit('message', generateMessage('A user has left!'))
     })
 
     socket.on('kickUser', () => {
-        io.emit('message', 'Person A has been kicked because he/she swore too much') //TODO: fill in with real username
+        io.emit('message', generateAdminMessage('Person A has been kicked because he/she swore too much')) //TODO: fill in with real username
     })
 
     socket.on('sendLocation', (location, callback) => {
-        io.emit('message', `https://google.com/maps?q=${location.lat},${location.long}`)
+        const locationUrl = `https://google.com/maps?q=${location.lat},${location.long}`
+        io.emit('locationMessage', generateLocationMessage(locationUrl))
         callback()
     })
 })

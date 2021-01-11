@@ -1,14 +1,47 @@
 const socket = io()
 
-socket.on('message', (message) => {
-    console.log('Message received: ', message)
-})
-
 // Elements
 const $messageForm = document.querySelector('#message-form')
 const $messsageFormInput = $messageForm.querySelector('input')
 const $messageFormButton = $messageForm.querySelector('button')
 const $sendLocationButton = document.querySelector('#send-location')
+const $messages = document.querySelector('#messages')
+
+// Templates
+const messageTemplate = document.querySelector('#message-template').innerHTML
+const locationMessageTemplate = document.querySelector('#location-message-template').innerHTML
+const systemMessageTemplate = document.querySelector('#system-message-template').innerHTML
+
+const renderAdminMessage = (message) => {
+    const html = Mustache.render(systemMessageTemplate, {
+        message
+    })
+    $messages.insertAdjacentHTML('beforeend', html)
+}
+
+
+socket.on('message', (message) => {
+    console.log('Message received: ', message)
+    const html = Mustache.render(messageTemplate, {
+        message: message.text,
+        createdAt: moment(message.createdAt).format('h:mm a')
+    })
+    $messages.insertAdjacentHTML('beforeend', html)
+})
+
+socket.on('locationMessage', (locationMessage) => {
+    console.log('Location received: ', locationMessage)
+    const html = Mustache.render(locationMessageTemplate, {
+        locationUrl: locationMessage.url,
+        createdAt: moment(locationMessage.createdAt).format('h:mm a')
+    })
+    $messages.insertAdjacentHTML('beforeend', html)
+})
+
+socket.on('adminMessage', (adminMessage) => {
+    renderAdminMessage(adminMessage)
+})
+
 
 let swearCount = 0
 
@@ -28,9 +61,9 @@ $messageForm.addEventListener('submit', (e) => {
             if (swearCount>=3){
                 socket.emit('kickUser')
                 e.target.elements.sendMessageButton.disabled=true
-                console.log("You can't send message anymore because you've been kicked")
+                renderAdminMessage("You can't send message anymore because you've been kicked")
             } else{ 
-                return console.log("Watch your mouth son! " + (3-swearCount) + " more and you'll be banned.")
+                return renderAdminMessage("Watch your mouth son! " + (3-swearCount) + " more and you'll be banned.")
             }
              
         } else{
