@@ -1,8 +1,7 @@
-const generateMessage = (text, swore) => {
+const generateMessage = (text) => {
     return {
         text,
-        createdAt: new Date().getTime(),
-        swore
+        createdAt: new Date().getTime()
     }
 }
 

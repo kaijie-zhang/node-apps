@@ -4,6 +4,7 @@ const express = require('express')
 const socketio = require('socket.io')
 const Filter = require('bad-words')
 const { generateMessage, generateLocationMessage } = require('./utils/messages')
+const { addUser, removeUser, getUser, getUsersInRoom} = require('./utils/users')
 
 const app  = express()
 const server = http.createServer(app)
@@ -17,28 +18,46 @@ app.use(express.static(publicDirectoryPath))
 io.on('connection', (socket) => {
     console.log('New WebSocket connection')
 
-    socket.emit('message', generateMessage('Welcome!'))
-    socket.broadcast.emit('message', generateMessage('A new user has joined!'))
+    socket.on('join', (options, callback) => {
+        const {error, user} = addUser({ id: socket.id, ...options})
+
+        if (error) {
+            return callback(error)
+        }
+
+        socket.join(user.room)
+
+        socket.emit('message', generateMessage('Welcome!'))
+        socket.broadcast.to(user.room).emit('message', generateMessage(`${user.username} has joined the room!`))
+
+        callback()
+    })
 
     socket.on('sendMessage', (message, callback) => {
         const filter = new Filter()
 
-        if (filter.isProfane(message)) {
-            callback({"swore": true}) //TODO: change admin messages to after swear message is sent, by using the new message schema
-            io.emit('message', generateMessage(filter.clean(message)))
+        if (filter.isProfane(message)) { 
+            io.to('frankfurt').emit('message', generateMessage(filter.clean(message)))
+            callback({"swore": true})
         } else{
-            io.emit('message', generateMessage(message))
+            io.to('frankfurt').emit('message', generateMessage(message))
             callback('Delivered')
         }
 
     })
 
     socket.on('disconnect', () => {
-        io.emit('message', generateMessage('A user has left!'))
+        const user = removeUser(socket.id)
+
+        if (user) {
+            io.to(user.room).emit('message', generateMessage(`${user.username} has left!`))
+        }
+        
     })
 
     socket.on('kickUser', () => {
-        io.emit('message', generateAdminMessage('Person A has been kicked because he/she swore too much')) //TODO: fill in with real username
+        const user = removeUser(socket.id)
+        io.to(user.room).emit('message', generateMessage(`${user.username}has been kicked because he/she swore too much!`))
     })
 
     socket.on('sendLocation', (location, callback) => {
@@ -52,3 +71,4 @@ io.on('connection', (socket) => {
 server.listen(port, () => {
     console.log('Server is up on port ' + port)
 })
+

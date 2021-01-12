@@ -12,6 +12,9 @@ const messageTemplate = document.querySelector('#message-template').innerHTML
 const locationMessageTemplate = document.querySelector('#location-message-template').innerHTML
 const systemMessageTemplate = document.querySelector('#system-message-template').innerHTML
 
+// Options
+const { username, room} = Qs.parse(location.search, {ignoreQueryPrefix:true})
+
 const renderAdminMessage = (message) => {
     const html = Mustache.render(systemMessageTemplate, {
         message
@@ -61,7 +64,8 @@ $messageForm.addEventListener('submit', (e) => {
             if (swearCount>=3){
                 socket.emit('kickUser')
                 e.target.elements.sendMessageButton.disabled=true
-                renderAdminMessage("You can't send message anymore because you've been kicked")
+                e.target.elements.$sendLocationButton.disabled=true
+                return renderAdminMessage("You can't send message anymore because you've been kicked")
             } else{ 
                 return renderAdminMessage("Watch your mouth son! " + (3-swearCount) + " more and you'll be banned.")
             }
@@ -96,4 +100,11 @@ $sendLocationButton.addEventListener('click', () => {
         $sendLocationButton.removeAttribute('disabled')
     }
 
+})
+
+socket.emit('join', {username, room}, (error) => {
+    if (error){
+        alert(error)
+        location.href = '/'
+    }
 })
