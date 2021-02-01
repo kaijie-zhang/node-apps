@@ -10,39 +10,66 @@ const $messages = document.querySelector('#messages')
 // Templates
 const messageTemplate = document.querySelector('#message-template').innerHTML
 const locationMessageTemplate = document.querySelector('#location-message-template').innerHTML
-const systemMessageTemplate = document.querySelector('#system-message-template').innerHTML
+const sideBarTemplate = document.querySelector('#sidebar-template').innerHTML
 
 // Options
 const { username, room} = Qs.parse(location.search, {ignoreQueryPrefix:true})
 
-const renderAdminMessage = (message) => {
-    const html = Mustache.render(systemMessageTemplate, {
-        message
-    })
-    $messages.insertAdjacentHTML('beforeend', html)
-}
+const autoscroll = () => {
+    // New message element
+    const $newMessage = $messages.lastElementChild
 
+    // Height of the new message
+    const newMessageStyles = getComputedStyle($newMessage)
+    const newMessageMargin = parseInt(newMessageStyles.marginBottom)
+    const newMessageHeight = $newMessage.offsetHeight + newMessageMargin
+
+    // Visible height
+    const visibleHeight = $messages.offsetHeight
+
+    // Height of messages container
+    const containerHeight = $messages.scrollHeight
+
+    // How far have I scrolled?
+    const scrollOffset = $messages.scrollTop + visibleHeight
+
+    if (containerHeight - newMessageHeight <= scrollOffset) {
+        $messages.scrollTop = $messages.scrollHeight
+    }
+
+}
 
 socket.on('message', (message) => {
     console.log('Message received: ', message)
     const html = Mustache.render(messageTemplate, {
+        username: message.username,
         message: message.text,
         createdAt: moment(message.createdAt).format('h:mm a')
     })
     $messages.insertAdjacentHTML('beforeend', html)
+    autoscroll()
 })
 
 socket.on('locationMessage', (locationMessage) => {
     console.log('Location received: ', locationMessage)
     const html = Mustache.render(locationMessageTemplate, {
+        username: locationMessage.username,
         locationUrl: locationMessage.url,
         createdAt: moment(locationMessage.createdAt).format('h:mm a')
     })
     $messages.insertAdjacentHTML('beforeend', html)
+    autoscroll()
 })
 
-socket.on('adminMessage', (adminMessage) => {
-    renderAdminMessage(adminMessage)
+socket.on('roomData', ({ room, onlineUsers, offlineUsers, allRooms, currentUsername}) => {
+    const html = Mustache.render(sideBarTemplate, {
+        room,
+        onlineUsers,
+        offlineUsers,
+        allRooms,
+        currentUsername
+    })
+    document.querySelector('#sidebar').innerHTML = html
 })
 
 
@@ -108,3 +135,4 @@ socket.emit('join', {username, room}, (error) => {
         location.href = '/'
     }
 })
+
